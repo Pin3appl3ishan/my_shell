@@ -50,8 +50,8 @@ def main():
                         print(f"Error executing {cmd_name}: {e}")
                     found = True
                     break
-                if not found:
-                    print(f"{cmd_name}: command not found")
+            if not found:
+                print(f"{cmd_name}: command not found")
 
 
 if __name__ == "__main__":
