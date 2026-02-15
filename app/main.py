@@ -5,12 +5,20 @@ def main():
     while True:
         sys.stdout.write("$ ")
     
-        command = input()
+        command = input().strip()
+        if not command:
+            continue #ignore empty input
 
-        if (command == "exit"):
+        parts = command.split()
+        cmd_name = parts[0]
+        args = parts[1:]
+
+        if (cmd_name == "exit"):
             break
-
-        print(f"{command}: command not found")
+        elif cmd_name == "echo":
+            print(" ".join(args))
+        else:
+            print(f"{cmd_name}: command not found")
 
 
 if __name__ == "__main__":
