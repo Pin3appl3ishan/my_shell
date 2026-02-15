@@ -1,4 +1,5 @@
 import sys
+import os
 
 BUILTINS = ["echo", "exit", "type"]
 
@@ -21,9 +22,20 @@ def main():
                 print("Usage: type <command>")
                 continue
             target = args[0]
+
             if target in BUILTINS:
                 print(f"{target} is a shell builtin")
-            else:
+                continue
+
+            found = False
+            for dir_path in os.environ.get("PATH", "").split(os.pathsep):
+                full_path = os.path.join(dir_path, target)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    print(f"{target} is {full_path}")
+                    found = True
+                    break
+                
+            if not found:
                 print(f"{target}: not found")
         elif cmd_name == "echo":
             print(" ".join(args))
