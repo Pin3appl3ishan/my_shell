@@ -1,5 +1,6 @@
 import sys
 import os
+import subprocess
 
 BUILTINS = ["echo", "exit", "type"]
 
@@ -30,17 +31,27 @@ def main():
             found = False
             for dir_path in os.environ.get("PATH", "").split(os.pathsep):
                 full_path = os.path.join(dir_path, target)
-                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK): #does file exist & is it executable
                     print(f"{target} is {full_path}")
                     found = True
                     break
-                
             if not found:
                 print(f"{target}: not found")
         elif cmd_name == "echo":
             print(" ".join(args))
         else:
-            print(f"{cmd_name}: command not found")
+            found = False
+            for dir_path in os.environ.get("PATH", "").split(os.pathsep):
+                full_path = os.path.join(dir_path, cmd_name)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK): #does file exist & is it executable
+                    try:
+                        subprocess.run([full_path] + args)
+                    except Exception as e:
+                        print(f"Error executing {cmd_name}: {e}")
+                    found = True
+                    break
+                if not found:
+                    print(f"{cmd_name}: command not found")
 
 
 if __name__ == "__main__":
