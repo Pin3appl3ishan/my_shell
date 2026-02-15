@@ -45,7 +45,7 @@ def main():
                 full_path = os.path.join(dir_path, cmd_name)
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK): #does file exist & is it executable
                     try:
-                        subprocess.run([full_path] + args)
+                        subprocess.run([cmd_name] + args, executable=full_path)
                     except Exception as e:
                         print(f"Error executing {cmd_name}: {e}")
                     found = True
