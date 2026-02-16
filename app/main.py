@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 
-BUILTINS = ["echo", "exit", "type", "pwd"]
+BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
 def main():
     while True:
@@ -41,6 +41,24 @@ def main():
             print(" ".join(args))
         elif cmd_name == 'pwd':
             print(os.getcwd())
+        elif cmd_name == 'cd':
+            if len(args) != 1:
+                print("Usage: cd <absolute_path>")
+                continue
+
+            target_dir = args[0]
+
+            if not target_dir.startswith("/"):
+                print(f"cd: {target_dir}: Not an absolute path")
+                continue
+
+            if os.path.isdir(target_dir):
+                try:
+                    os.chdir(target_dir)
+                except Exception as e:
+                    print(f"cd: {target_dir}: {e}")
+            else: 
+                print(f"cd: {target_dir}: No such file or directory")
         else:
             found = False
             for dir_path in os.environ.get("PATH", "").split(os.pathsep):
