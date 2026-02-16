@@ -2,7 +2,7 @@ import sys
 import os
 import subprocess
 
-BUILTINS = ["echo", "exit", "type"]
+BUILTINS = ["echo", "exit", "type", "pwd"]
 
 def main():
     while True:
@@ -39,6 +39,8 @@ def main():
                 print(f"{target}: not found")
         elif cmd_name == "echo":
             print(" ".join(args))
+        elif cmd_name == 'pwd':
+            print(os.getcwd())
         else:
             found = False
             for dir_path in os.environ.get("PATH", "").split(os.pathsep):
