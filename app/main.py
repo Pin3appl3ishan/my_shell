@@ -47,8 +47,9 @@ def main():
                 continue
 
             target_dir = args[0]
-
-            if target_dir.startswith("/"):
+            if target_dir == "~":
+                new_dir = os.environ.get("HOME", os.path.expanduser("~"))
+            elif target_dir.startswith("/"):
                 new_dir = target_dir # absolute path
             else:
                 new_dir = os.path.join(os.getcwd(), target_dir) # relative path
