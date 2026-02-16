@@ -48,13 +48,16 @@ def main():
 
             target_dir = args[0]
 
-            if not target_dir.startswith("/"):
-                print(f"cd: {target_dir}: Not an absolute path")
-                continue
+            if target_dir.startswith("/"):
+                new_dir = target_dir # absolute path
+            else:
+                new_dir = os.path.join(os.getcwd(), target_dir) # relative path
 
-            if os.path.isdir(target_dir):
+            new_dir = os.path.normpath(new_dir)
+
+            if os.path.isdir(new_dir):
                 try:
-                    os.chdir(target_dir)
+                    os.chdir(new_dir)
                 except Exception as e:
                     print(f"cd: {target_dir}: {e}")
             else: 
