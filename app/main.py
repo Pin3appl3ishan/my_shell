@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import shlex
 
 BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
@@ -12,7 +13,7 @@ def main():
         if not command:
             continue #ignore empty input
 
-        parts = command.split()
+        parts = shlex.split()
         cmd_name = parts[0]
         args = parts[1:]
 
