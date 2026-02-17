@@ -13,7 +13,7 @@ def main():
         if not command:
             continue #ignore empty input
 
-        parts = shlex.split()
+        parts = shlex.split(command)
         cmd_name = parts[0]
         args = parts[1:]
 
