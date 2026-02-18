@@ -51,18 +51,18 @@ def main():
             target = args[0]
 
             if target in BUILTINS:
-                print(f"{target} is a shell builtin")
+                write_output(f"{target} is a shell builtin", stdout_file)
                 continue
 
             found = False
             for dir_path in os.environ.get("PATH", "").split(os.pathsep):
                 full_path = os.path.join(dir_path, target)
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK): #does file exist & is it executable
-                    print(f"{target} is {full_path}")
+                    write_output(f"{target} is {full_path}", stdout_file)
                     found = True
                     break
             if not found:
-                print(f"{target}: not found")
+                write_output(f"{target}: not found", stdout_file)
         elif cmd_name == "echo":
             output = " ".join(args)
             write_output(output, stdout_file)
