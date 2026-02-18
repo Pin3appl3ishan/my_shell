@@ -5,6 +5,14 @@ import shlex
 
 BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
+def write_output(text, stdout_file):
+    if stdout_file:
+        with open(stdout_file, "w") as f:
+            print(text, file=f)
+    else:
+        print(text)
+
+
 def main():
     while True:
         sys.stdout.write("$ ")
@@ -14,6 +22,8 @@ def main():
             continue #ignore empty input
 
         parts = shlex.split(command)
+        stdout_file = None
+        
         i = 0
         while i < len(parts):
             if parts[i] in (">", "1>"):
@@ -55,18 +65,10 @@ def main():
                 print(f"{target}: not found")
         elif cmd_name == "echo":
             output = " ".join(args)
-            if stdout_file:
-                with open(stdout_file, "w") as f:
-                    print(output, file=f)
-            else:
-                print(output)
+            write_output(output, stdout_file)
         elif cmd_name == 'pwd':
             output = os.getcwd()
-            if stdout_file:
-                with open(stdout_file, "w") as f:
-                    print(output, file=f)
-            else:
-                print(output)
+            write_output(output, stdout_file)
         elif cmd_name == 'cd':
             if len(args) != 1:
                 print("Usage: cd <absolute_path>")
