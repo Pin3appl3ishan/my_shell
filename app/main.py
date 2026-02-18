@@ -14,6 +14,21 @@ def main():
             continue #ignore empty input
 
         parts = shlex.split(command)
+        i = 0
+        while i < len(parts):
+            if parts[i] in (">", "1>"):
+                if i + 1 >= len(parts):
+                    print("syntax error: no file specified")
+                    parts = []  # prevent execution
+                    break
+                stdout_file = parts[i + 1]
+                del parts[i:i+2]
+                break
+            i += 1
+
+        if not parts:
+            continue
+        
         cmd_name = parts[0]
         args = parts[1:]
 
@@ -39,9 +54,19 @@ def main():
             if not found:
                 print(f"{target}: not found")
         elif cmd_name == "echo":
-            print(" ".join(args))
+            output = " ".join(args)
+            if stdout_file:
+                with open(stdout_file, "w") as f:
+                    print(output, file=f)
+            else:
+                print(output)
         elif cmd_name == 'pwd':
-            print(os.getcwd())
+            output = os.getcwd()
+            if stdout_file:
+                with open(stdout_file, "w") as f:
+                    print(output, file=f)
+            else:
+                print(output)
         elif cmd_name == 'cd':
             if len(args) != 1:
                 print("Usage: cd <absolute_path>")
@@ -70,7 +95,19 @@ def main():
                 full_path = os.path.join(dir_path, cmd_name)
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK): #does file exist & is it executable
                     try:
-                        subprocess.run([cmd_name] + args, executable=full_path)
+                        if stdout_file:
+                            with open(stdout_file, "w") as f:
+                                subprocess.run(
+                                    [cmd_name] + args,
+                                    executable=full_path,
+                                    stdout=f
+                                )
+                        else:
+                            subprocess.run(
+                                [cmd_name] + args,
+                                executable=full_path
+                            )
+
                     except Exception as e:
                         print(f"Error executing {cmd_name}: {e}")
                     found = True
