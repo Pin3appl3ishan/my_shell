@@ -82,54 +82,56 @@ def _find_executable(name):
     return None
 
 
-def _run_pipeline(left_parts, right_parts):
-    r_fd, w_fd = os.pipe()
+def _run_pipeline(stages):
+    n = len(stages)
+    # Create n-1 pipes; pipes[i] connects stage i's stdout to stage i+1's stdin.
+    pipes = [os.pipe() for _ in range(n - 1)]  # each entry: (r_fd, w_fd)
 
-    # --- left side ---
-    if left_parts[0] in BUILTINS:
-        w_file = os.fdopen(w_fd, 'w')
-        def _left():
-            _run_builtin(left_parts, stdout=w_file)
-            w_file.close()
-        left_thread = threading.Thread(target=_left)
-        left_thread.start()
-        left_proc = None
-    else:
-        left_proc = subprocess.Popen(
-            left_parts,
-            executable=_find_executable(left_parts[0]),
-            stdout=w_fd,
-        )
-        os.close(w_fd)  # parent gives up its copy; left_proc owns it
-        left_thread = None
+    procs = []          # list of (Popen | None, Thread | None)
+    fds_to_close = []   # raw fds the parent must close after spawning all stages
 
-    # --- right side ---
-    if right_parts[0] in BUILTINS:
-        r_file = os.fdopen(r_fd, 'r')
-        def _right():
-            _run_builtin(right_parts)  # builtins ignore stdin
-            r_file.close()             # closing signals left side via SIGPIPE
-        right_thread = threading.Thread(target=_right)
-        right_thread.start()
-        right_proc = None
-    else:
-        right_proc = subprocess.Popen(
-            right_parts,
-            executable=_find_executable(right_parts[0]),
-            stdin=r_fd,
-        )
-        os.close(r_fd)  # parent gives up its copy; right_proc owns it
-        right_thread = None
+    for i, stage in enumerate(stages):
+        in_fd  = pipes[i - 1][0] if i > 0     else None  # read end of prev pipe
+        out_fd = pipes[i][1]     if i < n - 1 else None  # write end of next pipe
 
-    # wait: right first so left gets SIGPIPE when right's read-end closes
-    if right_thread:
-        right_thread.join()
-    if right_proc:
-        right_proc.wait()
-    if left_thread:
-        left_thread.join()
-    if left_proc:
-        left_proc.wait()
+        if stage[0] in BUILTINS:
+            out_file = os.fdopen(out_fd, 'w') if out_fd is not None else None
+            if in_fd is not None:
+                os.close(in_fd)  # builtins ignore stdin; close read end now
+            def make_target(s, o):
+                def _target():
+                    _run_builtin(s, stdout=o)
+                    if o is not None:
+                        o.close()
+                return _target
+            t = threading.Thread(target=make_target(stage, out_file))
+            t.start()
+            procs.append((None, t))
+        else:
+            kwargs = {}
+            if in_fd is not None:
+                kwargs['stdin'] = in_fd
+                fds_to_close.append(in_fd)
+            if out_fd is not None:
+                kwargs['stdout'] = out_fd
+                fds_to_close.append(out_fd)
+            p = subprocess.Popen(stage, executable=_find_executable(stage[0]), **kwargs)
+            procs.append((p, None))
+
+    # Parent drops its copies of all fds handed to Popen.
+    for fd in fds_to_close:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+    # Wait last-to-first: each stage's exit closes its read end, sending
+    # SIGPIPE to the stage before it, propagating the shutdown backward.
+    for proc, thread in reversed(procs):
+        if thread:
+            thread.join()
+        if proc:
+            proc.wait()
 
 
 def main():
@@ -144,10 +146,19 @@ def main():
         parts = shlex.split(command)
 
         if "|" in parts:
-            pipe_idx = parts.index("|")
-            left, right = parts[:pipe_idx], parts[pipe_idx + 1:]
-            if left and right:
-                _run_pipeline(left, right)
+            stages = []
+            current = []
+            for token in parts:
+                if token == "|":
+                    if current:
+                        stages.append(current)
+                    current = []
+                else:
+                    current.append(token)
+            if current:
+                stages.append(current)
+            if len(stages) >= 2:
+                _run_pipeline(stages)
             continue
 
         stdout_file = None
