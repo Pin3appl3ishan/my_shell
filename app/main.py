@@ -9,6 +9,17 @@ BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
 def _completer(text, state):
     matches = [b + " " for b in BUILTINS if b.startswith(text)]
+    for dir_path in os.environ.get("PATH", "").split(os.pathsep):
+        try:
+            for name in os.listdir(dir_path):
+                if name.startswith(text):
+                    full = os.path.join(dir_path, name)
+                    if os.path.isfile(full) and os.access(full, os.X_OK):
+                        candidate = name + " "
+                        if candidate not in matches:
+                            matches.append(candidate)
+        except OSError:
+            continue
     return matches[state] if state < len(matches) else None
 
 
