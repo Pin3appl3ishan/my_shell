@@ -7,7 +7,7 @@ BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
 def write_output(text, stdout_file):
     if stdout_file:
-        with open(stdout_file, "w") as f:
+        with open(stdout_file, "a") as f:
             print(text, file=f)
     else:
         print(text)
@@ -15,7 +15,7 @@ def write_output(text, stdout_file):
 
 def write_error(text, stderr_file):
     if stderr_file:
-        with open(stderr_file, "w") as f:
+        with open(stderr_file, "a") as f:
             print(text, file=f)
     else:
         print(text, file=sys.stderr)
@@ -54,6 +54,12 @@ def main():
 
         if not parts:
             continue
+
+        # Create/truncate redirect target files immediately (like bash does)
+        if stdout_file:
+            open(stdout_file, "w").close()
+        if stderr_file:
+            open(stderr_file, "w").close()
         
         cmd_name = parts[0]
         args = parts[1:]
@@ -113,8 +119,8 @@ def main():
                 full_path = os.path.join(dir_path, cmd_name)
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK): #does file exist & is it executable
                     try:
-                        stdout_arg = open(stdout_file, "w") if stdout_file else None
-                        stderr_arg = open(stderr_file, "w") if stderr_file else None
+                        stdout_arg = open(stdout_file, "a") if stdout_file else None
+                        stderr_arg = open(stderr_file, "a") if stderr_file else None
                         try:
                             subprocess.run(
                                 [cmd_name] + args,
