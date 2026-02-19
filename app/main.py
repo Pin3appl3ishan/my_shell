@@ -50,6 +50,32 @@ def write_error(text, err):
     print(text, file=err if err is not None else sys.stderr)
 
 
+def _find_executable(name):
+    for dir_path in os.environ.get("PATH", "").split(os.pathsep):
+        full = os.path.join(dir_path, name)
+        if os.path.isfile(full) and os.access(full, os.X_OK):
+            return full
+    return None
+
+
+def _run_pipeline(left_parts, right_parts):
+    left_exe = _find_executable(left_parts[0])
+    right_exe = _find_executable(right_parts[0])
+    p1 = subprocess.Popen(
+        left_parts,
+        executable=left_exe,
+        stdout=subprocess.PIPE,
+    )
+    p2 = subprocess.Popen(
+        right_parts,
+        executable=right_exe,
+        stdin=p1.stdout,
+    )
+    p1.stdout.close()   # lets p2's exit send SIGPIPE to p1
+    p2.wait()
+    p1.wait()
+
+
 def main():
     while True:
         sys.stdout.write("$ ")
@@ -60,6 +86,14 @@ def main():
             continue
 
         parts = shlex.split(command)
+
+        if "|" in parts:
+            pipe_idx = parts.index("|")
+            left, right = parts[:pipe_idx], parts[pipe_idx + 1:]
+            if left and right:
+                _run_pipeline(left, right)
+            continue
+
         stdout_file = None
         stdout_append = False
         stderr_file = None
@@ -137,14 +171,10 @@ def main():
                     write_output(f"{args[0]} is a shell builtin", out)
                 else:
                     target = args[0]
-                    found = False
-                    for dir_path in os.environ.get("PATH", "").split(os.pathsep):
-                        full_path = os.path.join(dir_path, target)
-                        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-                            write_output(f"{target} is {full_path}", out)
-                            found = True
-                            break
-                    if not found:
+                    full_path = _find_executable(target)
+                    if full_path:
+                        write_output(f"{target} is {full_path}", out)
+                    else:
                         write_error(f"{target}: not found", err)
 
             elif cmd_name == "echo":
@@ -174,23 +204,18 @@ def main():
                         write_error(f"cd: {target_dir}: No such file or directory", err)
 
             else:
-                found = False
-                for dir_path in os.environ.get("PATH", "").split(os.pathsep):
-                    full_path = os.path.join(dir_path, cmd_name)
-                    if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-                        try:
-                            subprocess.run(
-                                [cmd_name] + args,
-                                executable=full_path,
-                                stdout=out,
-
-                                stderr=err,
-                            )
-                        except Exception as e:
-                            write_error(f"Error executing {cmd_name}: {e}", None)
-                        found = True
-                        break
-                if not found:
+                full_path = _find_executable(cmd_name)
+                if full_path:
+                    try:
+                        subprocess.run(
+                            [cmd_name] + args,
+                            executable=full_path,
+                            stdout=out,
+                            stderr=err,
+                        )
+                    except Exception as e:
+                        write_error(f"Error executing {cmd_name}: {e}", None)
+                else:
                     write_error(f"{cmd_name}: command not found", err)
 
         finally:
