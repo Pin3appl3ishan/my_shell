@@ -3,6 +3,7 @@ import os
 import subprocess
 import shlex
 import readline
+import threading
 
 BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
 
@@ -50,6 +51,29 @@ def write_error(text, err):
     print(text, file=err if err is not None else sys.stderr)
 
 
+def _run_builtin(parts, stdout=None):
+    cmd_name = parts[0]
+    args = parts[1:]
+    out = stdout if stdout is not None else sys.stdout
+    if cmd_name == "echo":
+        print(" ".join(args), file=out)
+    elif cmd_name == "type":
+        if not args:
+            print("type: expected one argument", file=sys.stderr)
+        else:
+            target = args[0]
+            if target in BUILTINS:
+                print(f"{target} is a shell builtin", file=out)
+            else:
+                full_path = _find_executable(target)
+                if full_path:
+                    print(f"{target} is {full_path}", file=out)
+                else:
+                    print(f"{target}: not found", file=sys.stderr)
+    elif cmd_name == "pwd":
+        print(os.getcwd(), file=out)
+
+
 def _find_executable(name):
     for dir_path in os.environ.get("PATH", "").split(os.pathsep):
         full = os.path.join(dir_path, name)
@@ -59,21 +83,53 @@ def _find_executable(name):
 
 
 def _run_pipeline(left_parts, right_parts):
-    left_exe = _find_executable(left_parts[0])
-    right_exe = _find_executable(right_parts[0])
-    p1 = subprocess.Popen(
-        left_parts,
-        executable=left_exe,
-        stdout=subprocess.PIPE,
-    )
-    p2 = subprocess.Popen(
-        right_parts,
-        executable=right_exe,
-        stdin=p1.stdout,
-    )
-    p1.stdout.close()   # lets p2's exit send SIGPIPE to p1
-    p2.wait()
-    p1.wait()
+    r_fd, w_fd = os.pipe()
+
+    # --- left side ---
+    if left_parts[0] in BUILTINS:
+        w_file = os.fdopen(w_fd, 'w')
+        def _left():
+            _run_builtin(left_parts, stdout=w_file)
+            w_file.close()
+        left_thread = threading.Thread(target=_left)
+        left_thread.start()
+        left_proc = None
+    else:
+        left_proc = subprocess.Popen(
+            left_parts,
+            executable=_find_executable(left_parts[0]),
+            stdout=w_fd,
+        )
+        os.close(w_fd)  # parent gives up its copy; left_proc owns it
+        left_thread = None
+
+    # --- right side ---
+    if right_parts[0] in BUILTINS:
+        r_file = os.fdopen(r_fd, 'r')
+        def _right():
+            _run_builtin(right_parts)  # builtins ignore stdin
+            r_file.close()             # closing signals left side via SIGPIPE
+        right_thread = threading.Thread(target=_right)
+        right_thread.start()
+        right_proc = None
+    else:
+        right_proc = subprocess.Popen(
+            right_parts,
+            executable=_find_executable(right_parts[0]),
+            stdin=r_fd,
+        )
+        os.close(r_fd)  # parent gives up its copy; right_proc owns it
+        right_thread = None
+
+    # wait: right first so left gets SIGPIPE when right's read-end closes
+    if right_thread:
+        right_thread.join()
+    if right_proc:
+        right_proc.wait()
+    if left_thread:
+        left_thread.join()
+    if left_proc:
+        left_proc.wait()
 
 
 def main():
