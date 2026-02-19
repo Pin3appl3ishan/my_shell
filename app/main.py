@@ -13,6 +13,14 @@ def write_output(text, stdout_file):
         print(text)
 
 
+def write_error(text, stderr_file):
+    if stderr_file:
+        with open(stderr_file, "w") as f:
+            print(text, file=f)
+    else:
+        print(text, file=sys.stderr)
+
+
 def main():
     while True:
         sys.stdout.write("$ ")
@@ -23,18 +31,26 @@ def main():
 
         parts = shlex.split(command)
         stdout_file = None
-        
+        stderr_file = None
+
         i = 0
         while i < len(parts):
             if parts[i] in (">", "1>"):
                 if i + 1 >= len(parts):
                     print("syntax error: no file specified")
-                    parts = []  # prevent execution
+                    parts = []
                     break
                 stdout_file = parts[i + 1]
                 del parts[i:i+2]
-                break
-            i += 1
+            elif parts[i] == "2>":
+                if i + 1 >= len(parts):
+                    print("syntax error: no file specified")
+                    parts = []
+                    break
+                stderr_file = parts[i + 1]
+                del parts[i:i+2]
+            else:
+                i += 1
 
         if not parts:
             continue
@@ -62,7 +78,7 @@ def main():
                     found = True
                     break
             if not found:
-                write_output(f"{target}: not found", stdout_file)
+                write_error(f"{target}: not found", stderr_file)
         elif cmd_name == "echo":
             output = " ".join(args)
             write_output(output, stdout_file)
@@ -88,34 +104,36 @@ def main():
                 try:
                     os.chdir(new_dir)
                 except Exception as e:
-                    print(f"cd: {target_dir}: {e}")
-            else: 
-                print(f"cd: {target_dir}: No such file or directory")
+                    write_error(f"cd: {target_dir}: {e}", stderr_file)
+            else:
+                write_error(f"cd: {target_dir}: No such file or directory", stderr_file)
         else:
             found = False
             for dir_path in os.environ.get("PATH", "").split(os.pathsep):
                 full_path = os.path.join(dir_path, cmd_name)
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK): #does file exist & is it executable
                     try:
-                        if stdout_file:
-                            with open(stdout_file, "w") as f:
-                                subprocess.run(
-                                    [cmd_name] + args,
-                                    executable=full_path,
-                                    stdout=f
-                                )
-                        else:
+                        stdout_arg = open(stdout_file, "w") if stdout_file else None
+                        stderr_arg = open(stderr_file, "w") if stderr_file else None
+                        try:
                             subprocess.run(
                                 [cmd_name] + args,
-                                executable=full_path
+                                executable=full_path,
+                                stdout=stdout_arg,
+                                stderr=stderr_arg,
                             )
+                        finally:
+                            if stdout_arg:
+                                stdout_arg.close()
+                            if stderr_arg:
+                                stderr_arg.close()
 
                     except Exception as e:
                         print(f"Error executing {cmd_name}: {e}")
                     found = True
                     break
             if not found:
-                print(f"{cmd_name}: command not found")
+                write_error(f"{cmd_name}: command not found", stderr_file)
 
 
 if __name__ == "__main__":
