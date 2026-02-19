@@ -31,6 +31,7 @@ def main():
 
         parts = shlex.split(command)
         stdout_file = None
+        stdout_append = False
         stderr_file = None
 
         i = 0
@@ -41,6 +42,15 @@ def main():
                     parts = []
                     break
                 stdout_file = parts[i + 1]
+                stdout_append = False
+                del parts[i:i+2]
+            elif parts[i] in (">>", "1>>"):
+                if i + 1 >= len(parts):
+                    print("syntax error: no file specified")
+                    parts = []
+                    break
+                stdout_file = parts[i + 1]
+                stdout_append = True
                 del parts[i:i+2]
             elif parts[i] == "2>":
                 if i + 1 >= len(parts):
@@ -55,9 +65,10 @@ def main():
         if not parts:
             continue
 
-        # Create/truncate redirect target files immediately (like bash does)
+        # Create redirect target files immediately (like bash does).
+        # Use "w" (truncate) for > and "a" (preserve) for >>.
         if stdout_file:
-            open(stdout_file, "w").close()
+            open(stdout_file, "a" if stdout_append else "w").close()
         if stderr_file:
             open(stderr_file, "w").close()
         
