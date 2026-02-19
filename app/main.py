@@ -33,6 +33,7 @@ def main():
         stdout_file = None
         stdout_append = False
         stderr_file = None
+        stderr_append = False
 
         i = 0
         while i < len(parts):
@@ -58,6 +59,15 @@ def main():
                     parts = []
                     break
                 stderr_file = parts[i + 1]
+                stderr_append = False
+                del parts[i:i+2]
+            elif parts[i] == "2>>":
+                if i + 1 >= len(parts):
+                    print("syntax error: no file specified")
+                    parts = []
+                    break
+                stderr_file = parts[i + 1]
+                stderr_append = True
                 del parts[i:i+2]
             else:
                 i += 1
@@ -70,7 +80,7 @@ def main():
         if stdout_file:
             open(stdout_file, "a" if stdout_append else "w").close()
         if stderr_file:
-            open(stderr_file, "w").close()
+            open(stderr_file, "a" if stderr_append else "w").close()
         
         cmd_name = parts[0]
         args = parts[1:]
