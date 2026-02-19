@@ -2,8 +2,18 @@ import sys
 import os
 import subprocess
 import shlex
+import readline
 
 BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
+
+
+def _completer(text, state):
+    matches = [b + " " for b in BUILTINS if b.startswith(text)]
+    return matches[state] if state < len(matches) else None
+
+
+readline.set_completer(_completer)
+readline.parse_and_bind("tab: complete")
 
 
 def write_output(text, out):
@@ -147,6 +157,7 @@ def main():
                                 [cmd_name] + args,
                                 executable=full_path,
                                 stdout=out,
+
                                 stderr=err,
                             )
                         except Exception as e:
