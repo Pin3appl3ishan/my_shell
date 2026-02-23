@@ -5,7 +5,7 @@ import shlex
 import readline
 import threading
 
-BUILTINS = ["echo", "exit", "type", "pwd", "cd"]
+BUILTINS = ["echo", "exit", "type", "pwd", "cd", "history"]
 
 
 _matches_cache: list[str] = []
