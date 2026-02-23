@@ -280,7 +280,7 @@ def main():
                     write_error("history: invalid argument", err)
                     continue
                 
-                for idx, entry in enumerate(start_index, len(HISTORY)):
+                for idx, entry in range(start_index, len(HISTORY)):
                     print(f"{idx:>5}  {HISTORY[idx]}")           
             else:
                 full_path = _find_executable(cmd_name)
