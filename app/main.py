@@ -271,8 +271,17 @@ def main():
                     else:
                         write_error(f"cd: {target_dir}: No such file or directory", err)
             elif cmd_name == "history":
-                for idx, entry in enumerate(HISTORY, start=1):
-                    print(f"{idx:>5}  {entry}")           
+                if len(args) == 0:
+                    start_index = 0
+                elif len(args) == 1 and args[0].isdigit():
+                    n = int(args[0])
+                    start_index = max(len(HISTORY) - n, 0)
+                else:
+                    write_error("history: invalid argument", err)
+                    continue
+                
+                for idx, entry in enumerate(start_index, len(HISTORY)):
+                    print(f"{idx:>5}  {HISTORY[idx]}")           
             else:
                 full_path = _find_executable(cmd_name)
                 if full_path:
