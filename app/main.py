@@ -135,15 +135,16 @@ def _run_pipeline(stages):
 
 
 def main():
+    HISTORY: list[str] = []
+    
     while True:
-        sys.stdout.write("$ ")
-        sys.stdout.flush()
-
-        command = input().strip()
-        if not command:
+        line = input("$ ")
+        if not line.strip():
             continue
+        
+        HISTORY.append(line)        
 
-        parts = shlex.split(command)
+        parts = shlex.split(line)
 
         if "|" in parts:
             stages = []
@@ -269,7 +270,9 @@ def main():
                             write_error(f"cd: {target_dir}: {e}", err)
                     else:
                         write_error(f"cd: {target_dir}: No such file or directory", err)
-
+            elif cmd_name == "history":
+                for idx, entry in enumerate(HISTORY, start=1):
+                    print(f"{idx:>5}  {entry}")           
             else:
                 full_path = _find_executable(cmd_name)
                 if full_path:
