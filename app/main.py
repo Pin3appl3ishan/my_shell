@@ -136,6 +136,7 @@ def _run_pipeline(stages):
 
 def main():
     HISTORY: list[str] = []
+    last_appended_history_index = 0
     
     while True:
         line = input("$ ")
@@ -277,6 +278,8 @@ def main():
                         with open(path, "r") as f:
                             for line in f:
                                 HISTORY.append(line.rstrip("\n"))
+                        # Entries loaded from disk are already persisted.
+                        last_appended_history_index = len(HISTORY)
                     except OSError as e:
                         write_error(f"history: {e.strerror}", err)
                     continue
@@ -286,6 +289,18 @@ def main():
                         with open(path, "w") as f:
                             for entry in HISTORY:
                                 f.write(entry + "\n")
+                        # Full write means all current in-memory entries are persisted.
+                        last_appended_history_index = len(HISTORY)
+                    except OSError as e:
+                        write_error(f"history: {e.strerror}", err)
+                    continue
+                if len(args) >= 2 and args[0] == "-a":
+                    path = args[1]
+                    try:
+                        with open(path, "a") as f:
+                            for entry in HISTORY[last_appended_history_index:]:
+                                f.write(entry + "\n")
+                        last_appended_history_index = len(HISTORY)
                     except OSError as e:
                         write_error(f"history: {e.strerror}", err)
                     continue
