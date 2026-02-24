@@ -280,6 +280,15 @@ def main():
                     except OSError as e:
                         write_error(f"history: {e.strerror}", err)
                     continue
+                if len(args) >= 2 and args[0] == "-w":
+                    path = args[1]
+                    try: 
+                        with open(path, "w") as f:
+                            for entry in HISTORY:
+                                f.write(entry + "\n")
+                    except OSError as e:
+                        write_error(f"history: {e.strerror}", err)
+                    continue
                 
                 if len(args) == 0:
                     start_index = 0
