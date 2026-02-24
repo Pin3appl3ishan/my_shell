@@ -137,6 +137,18 @@ def _run_pipeline(stages):
 def main():
     HISTORY: list[str] = []
     last_appended_history_index = 0
+    histfile = os.environ.get("HISTFILE")
+    if histfile:
+        try:
+            with open(histfile, "r") as f:
+                for line in f:
+                    entry = line.rstrip("\n")
+                    if entry:
+                        HISTORY.append(entry)
+            # Entries loaded at startup are already persisted.
+            last_appended_history_index = len(HISTORY)
+        except OSError:
+            pass
     
     while True:
         line = input("$ ")
@@ -212,6 +224,13 @@ def main():
         args = parts[1:]
 
         if cmd_name == "exit":
+            if histfile:
+                try:
+                    with open(histfile, "w") as f:
+                        for entry in HISTORY:
+                            f.write(entry + "\n")
+                except OSError:
+                    pass
             break
 
         # Open redirect files once with the correct mode before running the command.
@@ -315,7 +334,7 @@ def main():
                     continue
                 
                 for idx in range(start_index, len(HISTORY)):
-                    print(f"{idx:>5}  {HISTORY[idx]}")           
+                    print(f"{idx + 1:>5}  {HISTORY[idx]}")
             else:
                 full_path = _find_executable(cmd_name)
                 if full_path:
