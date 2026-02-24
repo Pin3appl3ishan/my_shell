@@ -271,6 +271,16 @@ def main():
                     else:
                         write_error(f"cd: {target_dir}: No such file or directory", err)
             elif cmd_name == "history":
+                if len(args) >= 2 and args[0] == "-r":
+                    path = args[1]
+                    try: 
+                        with open(path, "r") as f:
+                            for line in f:
+                                HISTORY.append(line.rstrip("\n"))
+                    except OSError as e:
+                        write_error(f"history: {e.strerror}", err)
+                    continue
+                
                 if len(args) == 0:
                     start_index = 0
                 elif len(args) == 1 and args[0].isdigit():
