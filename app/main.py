@@ -31,9 +31,24 @@ def _completer(text, state):
                     continue
         else:
             try:
-                for name in os.listdir("."):
-                    if name.startswith(text) and os.path.isfile(name):
-                        matches.append(name + " ")
+                if "/" in text:
+                    dir_part, prefix = text.rsplit("/", 1)
+                    # Preserve a leading "/" for absolute paths.
+                    if dir_part == "":
+                        search_dir = "/"
+                        path_prefix = "/"
+                    else:
+                        search_dir = dir_part
+                        path_prefix = dir_part + "/"
+
+                    for name in os.listdir(search_dir):
+                        full = os.path.join(search_dir, name)
+                        if name.startswith(prefix) and os.path.isfile(full):
+                            matches.append(path_prefix + name + " ")
+                else:
+                    for name in os.listdir("."):
+                        if name.startswith(text) and os.path.isfile(name):
+                            matches.append(name + " ")
             except OSError:
                 pass
         matches.sort(key=lambda m: m.rstrip())
