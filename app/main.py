@@ -14,18 +14,28 @@ _matches_cache: list[str] = []
 def _completer(text, state):
     global _matches_cache
     if state == 0:
-        matches = [b + " " for b in BUILTINS if b.startswith(text)]
-        for dir_path in os.environ.get("PATH", "").split(os.pathsep):
+        matches = []
+        # Complete command names for the first token, filenames otherwise.
+        if readline.get_begidx() == 0:
+            matches = [b + " " for b in BUILTINS if b.startswith(text)]
+            for dir_path in os.environ.get("PATH", "").split(os.pathsep):
+                try:
+                    for name in os.listdir(dir_path):
+                        if name.startswith(text):
+                            full = os.path.join(dir_path, name)
+                            if os.path.isfile(full) and os.access(full, os.X_OK):
+                                candidate = name + " "
+                                if candidate not in matches:
+                                    matches.append(candidate)
+                except OSError:
+                    continue
+        else:
             try:
-                for name in os.listdir(dir_path):
-                    if name.startswith(text):
-                        full = os.path.join(dir_path, name)
-                        if os.path.isfile(full) and os.access(full, os.X_OK):
-                            candidate = name + " "
-                            if candidate not in matches:
-                                matches.append(candidate)
+                for name in os.listdir("."):
+                    if name.startswith(text) and os.path.isfile(name):
+                        matches.append(name + " ")
             except OSError:
-                continue
+                pass
         matches.sort(key=lambda m: m.rstrip())
         _matches_cache = matches
     return _matches_cache[state] if state < len(_matches_cache) else None
