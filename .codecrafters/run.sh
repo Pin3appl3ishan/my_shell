@@ -8,4 +8,11 @@
 
 set -e # Exit on failure
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH="$REPO_ROOT:$PYTHONPATH"
+else
+  export PYTHONPATH="$REPO_ROOT"
+fi
 exec uv run --quiet -m app.main "$@"

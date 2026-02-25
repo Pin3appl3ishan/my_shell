@@ -12,4 +12,10 @@ set -e # Exit early if any commands fail
 #
 # - Edit this to change how your program runs locally
 # - Edit .codecrafters/run.sh to change how your program runs remotely
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+else
+  export PYTHONPATH="$SCRIPT_DIR"
+fi
 exec uv run --quiet -m app.main "$@"
