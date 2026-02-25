@@ -49,13 +49,15 @@ def _completer(text, state):
 
                     for name in os.listdir(search_dir):
                         full = os.path.join(search_dir, name)
-                        if name.startswith(prefix) and os.path.isfile(full):
+                        if name.startswith(prefix) and (os.path.isfile(full) or os.path.isdir(full)):
                             desired = path_prefix + name
-                            matches.append(desired[len(token_head):] + " ")
+                            suffix = "/" if os.path.isdir(full) else " "
+                            matches.append(desired[len(token_head):] + suffix)
                 else:
                     for name in os.listdir("."):
-                        if name.startswith(token) and os.path.isfile(name):
-                            matches.append(name[len(token_head):] + " ")
+                        if name.startswith(token) and (os.path.isfile(name) or os.path.isdir(name)):
+                            suffix = "/" if os.path.isdir(name) else " "
+                            matches.append(name[len(token_head):] + suffix)
             except OSError:
                 pass
         matches.sort(key=lambda m: m.rstrip())
