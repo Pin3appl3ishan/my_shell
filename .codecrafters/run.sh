@@ -8,6 +8,4 @@
 
 set -e # Exit on failure
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-exec uv run --quiet "$REPO_ROOT/app/main.py" "$@"
+exec uv run --quiet /tmp/shell-target/app/main.py "$@"

@@ -8,4 +8,8 @@
 
 set -e # Exit on failure
 
-# (This file is empty since Python programs don't use a compile step)
+TARGET_DIR="/tmp/shell-target"
+
+rm -rf "$TARGET_DIR"
+mkdir -p "$TARGET_DIR"
+cp -R app "$TARGET_DIR/app"
