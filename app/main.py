@@ -30,9 +30,15 @@ def _completer(text, state):
                 except OSError:
                     continue
         else:
+            line = readline.get_line_buffer()
+            begidx = readline.get_begidx()
+            endidx = readline.get_endidx()
+            token = line[:endidx].rsplit(" ", 1)[-1]
+            replace_text = line[begidx:endidx]
+            token_head = token[:-len(replace_text)] if replace_text else token
             try:
-                if "/" in text:
-                    dir_part, prefix = text.rsplit("/", 1)
+                if "/" in token:
+                    dir_part, prefix = token.rsplit("/", 1)
                     # Preserve a leading "/" for absolute paths.
                     if dir_part == "":
                         search_dir = "/"
@@ -44,11 +50,12 @@ def _completer(text, state):
                     for name in os.listdir(search_dir):
                         full = os.path.join(search_dir, name)
                         if name.startswith(prefix) and os.path.isfile(full):
-                            matches.append(path_prefix + name + " ")
+                            desired = path_prefix + name
+                            matches.append(desired[len(token_head):] + " ")
                 else:
                     for name in os.listdir("."):
-                        if name.startswith(text) and os.path.isfile(name):
-                            matches.append(name + " ")
+                        if name.startswith(token) and os.path.isfile(name):
+                            matches.append(name[len(token_head):] + " ")
             except OSError:
                 pass
         matches.sort(key=lambda m: m.rstrip())
